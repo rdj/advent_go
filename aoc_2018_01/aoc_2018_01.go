@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"strconv"
 )
@@ -44,10 +43,24 @@ func DoPart1(input []int) AdventResult {
 	return AdventResult(state)
 }
 
+func DoPart2(input []int) AdventResult {
+	seen := make(map[int]bool)
+	state := 0
+	for {
+		for _, n := range input {
+			seen[state] = true
+			state += n
+			if seen[state] {
+				return AdventResult(state)
+			}
+		}
+	}
+}
+
 func Part1() AdventResult {
 	return DoPart1(ParseInput(openInput()))
 }
 
 func Part2() AdventResult {
-	return math.MaxInt
+	return DoPart2(ParseInput(openInput()))
 }
