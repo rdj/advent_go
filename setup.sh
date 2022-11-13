@@ -13,12 +13,18 @@ fi
 
 DAY_2D=$(printf '%02d' ${DAY})
 
-PROJECT="aoc-${YEAR}-${DAY_2D}"
+PROJECT="aoc_${YEAR}_${DAY_2D}"
 PROJECT_DIR="${MY_DIR}/${PROJECT}"
 
 mkdir -p "${PROJECT_DIR}"
 "${MY_DIR}/aoc-input.sh" "${DAY}" "${YEAR}" > "${PROJECT_DIR}/input.txt"
+
+for f in "${MY_DIR}/template/"*.go; do
+    dst=$(basename $f)
+    dst="${PROJECT_DIR}/${dst//aoc_yyyy_mm/${PROJECT}}"
+    perl -p -e "s{aoc_yyyy_mm}{${PROJECT}}" < "$f" > "$dst"
+done
 cd "${PROJECT_DIR}"
 go mod init "rdj/${PROJECT}"
-emacsclient --no-wait go.mod
+emacsclient --no-wait *.go
 
