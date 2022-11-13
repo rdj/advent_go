@@ -42,7 +42,9 @@ func init() {
 	minutePattern = regexp.MustCompile(`:(\d+)\]`)
 }
 
-func DoPart1(input []string) AdventResult {
+type SleepyMap map[int]map[int]int
+
+func buildSleepMap(input []string) SleepyMap {
 	sort.Strings(input)
 
 	sleepy := map[int]map[int]int{}
@@ -52,7 +54,7 @@ func DoPart1(input []string) AdventResult {
 	for _, line := range input {
 		m := minutePattern.FindStringSubmatch(line)
 		if m == nil {
-			panic("bad input")
+			panic(fmt.Sprintf("bad input %q", line))
 		}
 
 		minute, err := strconv.Atoi(m[1])
@@ -88,6 +90,12 @@ func DoPart1(input []string) AdventResult {
 		}
 	}
 
+	return sleepy
+}
+
+func DoPart1(input []string) AdventResult {
+	sleepy := buildSleepMap(input)
+
 	type Guard struct{ guard, sleepTime, bestMinute, bestValue int }
 	var max Guard
 
@@ -110,7 +118,22 @@ func DoPart1(input []string) AdventResult {
 }
 
 func DoPart2(input []string) AdventResult {
-	return AdventResult(0)
+	sleepy := buildSleepMap(input)
+
+	type Guard struct{ guard, bestMinute, bestValue int }
+	var max Guard
+
+	for guard, mins := range sleepy {
+		for minute, n := range mins {
+			if n > max.bestValue {
+				max.guard = guard
+				max.bestMinute = minute
+				max.bestValue = n
+			}
+		}
+	}
+
+	return AdventResult(max.guard * max.bestMinute)
 }
 
 func Part1() AdventResult {

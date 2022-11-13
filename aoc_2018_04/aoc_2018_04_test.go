@@ -35,15 +35,10 @@ func TestPart1Examples(t *testing.T) {
 }
 
 func TestPart2Examples(t *testing.T) {
-	egs := map[string]AdventResult{
-		"YYY": -1,
-	}
-
-	for in, want := range egs {
-		got := DoPart2(ParseInput(strings.NewReader(in)))
-		if got != want {
-			t.Errorf("DoPart2(%q) got %v, wanted %v", in, got, want)
-		}
+	const want = 4455
+	got := DoPart2(ParseInput(strings.NewReader(example1)))
+	if got != want {
+		t.Errorf("DoPart2(Example1) got %v, wanted %v", got, want)
 	}
 }
 
@@ -56,7 +51,7 @@ func TestPart1(t *testing.T) {
 }
 
 func TestPart2(t *testing.T) {
-	const want = -1
+	const want = 41_668
 	got := Part2()
 	if got != want {
 		t.Errorf("Part2() got %v, wanted %v", got, want)
