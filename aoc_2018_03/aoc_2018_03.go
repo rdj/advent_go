@@ -40,6 +40,7 @@ func openInput() io.Reader {
 func ParseInput(input io.Reader) chan Claim {
 	ch := make(chan Claim)
 	go func() {
+		defer close(ch)
 		scanner := bufio.NewScanner(input)
 		for scanner.Scan() {
 			var c Claim
@@ -48,12 +49,11 @@ func ParseInput(input io.Reader) chan Claim {
 			}
 			ch <- c
 		}
-		close(ch)
 	}()
 	return ch
 }
 
-func DoPart1(ch chan Claim) AdventResult {
+func buildMap(ch chan Claim) map[Coord]int {
 	claimed := map[Coord]int{}
 	for e := range ch {
 		for r := e.row; r < e.row+e.height; r++ {
@@ -62,6 +62,11 @@ func DoPart1(ch chan Claim) AdventResult {
 			}
 		}
 	}
+	return claimed
+}
+
+func DoPart1(ch chan Claim) AdventResult {
+	claimed := buildMap(ch)
 
 	count := 0
 	for _, n := range claimed {
@@ -73,6 +78,30 @@ func DoPart1(ch chan Claim) AdventResult {
 }
 
 func DoPart2(ch chan Claim) AdventResult {
+	// Capture the Claims from ch before passing them to buildMap
+	claims := make([]Claim, 0, 16)
+	build := make(chan Claim)
+	go func() {
+		defer close(build)
+		for c := range ch {
+			claims = append(claims, c)
+			build <- c
+		}
+	}()
+	claimed := buildMap(build)
+
+Entry:
+	for _, e := range claims {
+		for r := e.row; r < e.row+e.height; r++ {
+			for c := e.col; c < e.col+e.width; c++ {
+				if claimed[Coord{r, c}] > 1 {
+					continue Entry
+				}
+			}
+		}
+		return AdventResult(e.id)
+	}
+
 	return AdventResult(0)
 }
 
