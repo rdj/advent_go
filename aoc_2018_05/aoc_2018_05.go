@@ -1,6 +1,7 @@
 package aoc_2018_05
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ import (
 var _ = fmt.Println
 var _ = strconv.Atoi
 
+const asciiCaseDiff = 'a' - 'A'
 const inputFile = "input.txt"
 
 type AdventResult int
@@ -36,7 +38,7 @@ func ParseInput(input io.Reader) []byte {
 	return b
 }
 
-func DoPart1(input []byte) AdventResult {
+func reduce(input []byte) []byte {
 	var before int
 	for {
 		before = len(input)
@@ -49,7 +51,7 @@ func DoPart1(input []byte) AdventResult {
 			} else {
 				diff = b - a
 			}
-			if diff == 'a'-'A' {
+			if diff == asciiCaseDiff {
 				input = append(input[:i], input[i+2:]...)
 			}
 		}
@@ -59,11 +61,36 @@ func DoPart1(input []byte) AdventResult {
 		}
 	}
 
+	return input
+}
+
+func DoPart1(input []byte) AdventResult {
+	input = reduce(input)
 	return AdventResult(len(input))
 }
 
+func makeFilter(cap rune) func(rune) rune {
+	lower := cap + asciiCaseDiff
+	return func(r rune) rune {
+		if r == cap || r == lower {
+			return -1
+		}
+		return r
+	}
+}
+
 func DoPart2(input []byte) AdventResult {
-	return AdventResult(0)
+	shortest := int(^uint(0) >> 1)
+
+	for c := 'A'; c <= 'Z'; c++ {
+		filtered := bytes.Map(makeFilter(c), input)
+		filtered = reduce(filtered)
+		if len(filtered) < shortest {
+			shortest = len(filtered)
+		}
+	}
+
+	return AdventResult(shortest)
 }
 
 func Part1() AdventResult {
