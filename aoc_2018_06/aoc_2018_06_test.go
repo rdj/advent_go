@@ -23,11 +23,11 @@ func TestPart1Examples(t *testing.T) {
 
 func TestPart2Examples(t *testing.T) {
 	egs := map[string]AdventResult{
-		example1: -1,
+		example1: 16,
 	}
 
 	for in, want := range egs {
-		got := DoPart2(ParseInput(strings.NewReader(in)))
+		got := DoPart2(ParseInput(strings.NewReader(in)), 32)
 		if got != want {
 			t.Errorf("DoPart2(%q) got %v, wanted %v", in, got, want)
 		}
@@ -43,7 +43,7 @@ func TestPart1(t *testing.T) {
 }
 
 func TestPart2(t *testing.T) {
-	const want = -1
+	const want = 44_634
 	got := Part2()
 	if got != want {
 		t.Errorf("Part2() got %v, wanted %v", got, want)

@@ -51,8 +51,9 @@ func dist(a, b point) int {
 	return dist
 }
 
-func DoPart1(points []point) AdventResult {
-	type Bounds struct{ xmin, xmax, ymin, ymax int }
+type Bounds struct{ xmin, xmax, ymin, ymax int }
+
+func getBounds(points []point) Bounds {
 	bounds := Bounds{int(^uint(0) >> 1), -1, int(^uint(0) >> 1), -1}
 	for _, p := range points {
 		if p.x < bounds.xmin {
@@ -68,6 +69,11 @@ func DoPart1(points []point) AdventResult {
 			bounds.ymax = p.y
 		}
 	}
+	return bounds
+}
+
+func DoPart1(points []point) AdventResult {
+	bounds := getBounds(points)
 
 	type Tile struct {
 		id   byte
@@ -137,8 +143,26 @@ func DoPart1(points []point) AdventResult {
 	return AdventResult(max.count)
 }
 
-func DoPart2(points []point) AdventResult {
-	return AdventResult(0)
+func DoPart2(points []point, threshhold int) AdventResult {
+	bounds := getBounds(points)
+	count := 0
+
+	for y := bounds.ymin; y <= bounds.ymax; y++ {
+	X:
+		for x := bounds.xmin; x <= bounds.xmax; x++ {
+			tile := point{x, y}
+			d := 0
+			for _, p := range points {
+				d += dist(p, tile)
+				if d >= threshhold {
+					continue X
+				}
+			}
+			count += 1
+		}
+	}
+
+	return AdventResult(count)
 }
 
 func Part1() AdventResult {
@@ -146,5 +170,5 @@ func Part1() AdventResult {
 }
 
 func Part2() AdventResult {
-	return DoPart2(ParseInput(openInput()))
+	return DoPart2(ParseInput(openInput()), 10_000)
 }
