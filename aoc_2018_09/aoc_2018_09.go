@@ -54,13 +54,10 @@ func DoPart1(input ParsedInput) Part1Result {
 	for m := 1; m <= input.lastMarble; m++ {
 		if m%23 == 0 {
 			p := (m - 1) % len(players)
-			players[p] += m
 
-			for i := 0; i < 8; i++ {
-				current = current.Prev()
-			}
+			current = current.Move(-8)
 			rem := current.Unlink(1)
-			players[p] += rem.Value.(int)
+			players[p] += m + rem.Value.(int)
 
 			current = current.Next()
 			continue
@@ -76,9 +73,9 @@ func DoPart1(input ParsedInput) Part1Result {
 	}
 
 	best := 0
-	for p := 0; p < len(players); p++ {
-		if players[p] > best {
-			best = players[p]
+	for _, score := range players {
+		if score > best {
+			best = score
 		}
 	}
 
