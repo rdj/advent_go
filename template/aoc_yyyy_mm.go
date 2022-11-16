@@ -5,25 +5,33 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 )
 
 var _ = fmt.Println
-var _ = strconv.Atoi
 
 const inputFile = "input.txt"
 
-type AdventResult int
+type Part1Result int
+
+const Part1Fake = 0xDEAD_BEEF
+const Part1Want = 0xBAAD_F00D
+
+type Part2Result int
+
+const Part2Fake = 0xDEAD_BEEF
+const Part2Want = 0xBAAD_F00D
+
+type ParsedInput []string
 
 func openInput() io.Reader {
-	data, err := os.Open(inputFile)
+	reader, err := os.Open(inputFile)
 	if err != nil {
 		panic(err)
 	}
-	return data
+	return reader
 }
 
-func ParseInput(input io.Reader) []string {
+func ParseInput(input io.Reader) ParsedInput {
 	lines := make([]string, 0)
 	scanner := bufio.NewScanner(input)
 	for scanner.Scan() {
@@ -32,18 +40,18 @@ func ParseInput(input io.Reader) []string {
 	return lines
 }
 
-func DoPart1(input []string) AdventResult {
-	return AdventResult(0)
+func DoPart1(input ParsedInput) Part1Result {
+	return Part1Fake
 }
 
-func DoPart2(input []string) AdventResult {
-	return AdventResult(0)
+func DoPart2(input ParsedInput) Part2Result {
+	return Part2Fake
 }
 
-func Part1() AdventResult {
+func Part1() Part1Result {
 	return DoPart1(ParseInput(openInput()))
 }
 
-func Part2() AdventResult {
+func Part2() Part2Result {
 	return DoPart2(ParseInput(openInput()))
 }
