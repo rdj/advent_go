@@ -19,7 +19,7 @@ const Part1Want = 412_959
 type Part2Result int
 
 const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 3_333_662_986
 
 type ParsedInput struct{ nplayers, lastMarble int }
 
@@ -86,7 +86,11 @@ func DoPart1(input ParsedInput) Part1Result {
 }
 
 func DoPart2(input ParsedInput) Part2Result {
-	return Part2Fake
+	// LOL I thought I was going to have to analyze this into some
+	// kind of large number modular arithmetic problem but it's no
+	// problem to simulate with 64-bit integers
+	input.lastMarble *= 100
+	return Part2Result(DoPart1(input))
 }
 
 func Part1() Part1Result {
