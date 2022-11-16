@@ -1,7 +1,6 @@
 package aoc_2018_10
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -38,18 +37,25 @@ position=< 5,  9> velocity=< 1, -2>
 position=<14,  7> velocity=<-2,  0>
 position=<-3,  6> velocity=< 2, -1>`
 
-func xTestPart1Examples(t *testing.T) {
-	want := Part1Want
+func TestPart1Examples(t *testing.T) {
+	const want = `#...#..###
+#...#...#.
+#...#...#.
+#####...#.
+#...#...#.
+#...#...#.
+#...#...#.
+#...#..###`
 	got := DoPart1(ParseInput(strings.NewReader(Example1)))
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("DoPart1(Example1) got %v, wanted %v", got, want)
+	if got != want {
+		t.Errorf("DoPart1(Example1) got %#q, wanted %#q", got, want)
 	}
 }
 
 func TestPart2Examples(t *testing.T) {
-	want := Part2Want
+	const want = 3
 	got := DoPart2(ParseInput(strings.NewReader(Example1)))
-	if !reflect.DeepEqual(got, want) {
+	if got != want {
 		t.Errorf("DoPart2(Example1) got %v, wanted %v", got, want)
 	}
 }

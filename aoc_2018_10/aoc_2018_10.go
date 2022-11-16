@@ -13,15 +13,24 @@ var _ = fmt.Println
 
 const inputFile = "input.txt"
 
-type Part1Result int
+type Part1Result string
 
-const Part1Fake = 0xDEAD_BEEF
-const Part1Want = 0xBAAD_F00D
+const Part1Fake = "0xDEAD_BEEF"
+const Part1Want = `######....##....######..######..#####...#.......######...####.
+.....#...#..#...#............#..#....#..#............#..#....#
+.....#..#....#..#............#..#....#..#............#..#.....
+....#...#....#..#...........#...#....#..#...........#...#.....
+...#....#....#..#####......#....#####...#..........#....#.....
+..#.....######..#.........#.....#..#....#.........#.....#..###
+.#......#....#..#........#......#...#...#........#......#....#
+#.......#....#..#.......#.......#...#...#.......#.......#....#
+#.......#....#..#.......#.......#....#..#.......#.......#...##
+######..#....#..######..######..#....#..######..######...###.#`
 
 type Part2Result int
 
 const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 10105
 
 type Bodies []Body
 
@@ -55,6 +64,11 @@ func (bs Bodies) limits() (xmin, ymin, xmax, ymax int) {
 	return
 }
 
+func (bs Bodies) Size() int {
+	xmin, ymin, xmax, ymax := bs.limits()
+	return (ymax - ymin) + (xmax - xmin)
+}
+
 func (bs Bodies) String() string {
 	points := map[Point]bool{}
 	for _, b := range bs {
@@ -64,10 +78,10 @@ func (bs Bodies) String() string {
 	xmin, ymin, xmax, ymax := bs.limits()
 	sb := strings.Builder{}
 
-	span := (ymax - ymin) + (xmax - xmin)
-	fmt.Fprintf(&sb, "Span=%d :(%d, %d) - (%d, %d)\n", span, xmin, ymin, xmax, ymax)
+	size := (ymax - ymin) + (xmax - xmin)
+	//fmt.Fprintf(&sb, "Size=%d : (%d, %d) - (%d, %d)\n", size, xmin, ymin, xmax, ymax)
 
-	if span < 80 {
+	if size < 100 {
 		for y := ymin; y <= ymax; y++ {
 			if y > ymin {
 				sb.WriteRune('\n')
@@ -113,15 +127,36 @@ func ParseInput(input io.Reader) Bodies {
 	return bodies
 }
 
-func DoPart1(bodies Bodies) Part1Result {
-	bodies.advance(10105)
-	fmt.Println(bodies)
+func simulate(bodies Bodies) (string, int) {
+	var prevSize int
+	t := 0
+	for {
+		prevSize = bodies.Size()
 
-	return Part1Fake
+		bodies.advance(1)
+		size := bodies.Size()
+
+		if size > prevSize {
+			bodies.advance(-1)
+			// fmt.Println("T = ", t)
+			// fmt.Println(bodies)
+			return bodies.String(), t
+		}
+
+		t += 1
+	}
+
+	panic("diverged")
 }
 
-func DoPart2(input Bodies) Part2Result {
-	return Part2Fake
+func DoPart1(bodies Bodies) Part1Result {
+	msg, _ := simulate(bodies)
+	return Part1Result(msg)
+}
+
+func DoPart2(bodies Bodies) Part2Result {
+	_, t := simulate(bodies)
+	return Part2Result(t)
 }
 
 func Part1() Part1Result {
