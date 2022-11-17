@@ -57,37 +57,60 @@ func singleValues(d, n int) [][]int {
 	return values
 }
 
-func subValue(x, y, sub int, singles [][]int) int {
-	value := 0
-	for y0 := y; y0 < y+sub; y0++ {
-		for x0 := x; x0 < x+sub; x0++ {
-			value += singles[y0][x0]
+// Calculates a Summed-area table, aka integral image. In a single
+// pass, each position is transformed into the sum of all positions at
+// lower coordinates.
+//
+// See https://en.wikipedia.org/wiki/Summed-area_table
+func partials(d, n int) [][]int {
+	singles := singleValues(d, n)
+	for y := range singles {
+		for x := range singles[y] {
+			n := &singles[y][x]
+			if x > 0 {
+				if y > 0 {
+					*n -= singles[y-1][x-1]
+				}
+				*n += singles[y][x-1]
+			}
+			if y > 0 {
+				*n += singles[y-1][x]
+			}
 		}
 	}
-	return value
+	return singles
 }
 
-func subValues(sub int, singles [][]int) [][]int {
-	subDim := len(singles) + 1 - sub
-	subs := make([][]int, subDim)
-	for i := range subs {
-		subs[i] = make([]int, subDim)
-	}
+// From the table calculated by `partials`, any arbitrary sub-area
+// sum can be calculated by simple combination of four coordinates.
+// The linked wikipedia article has an illustration.
+func bestSubSquare(d int, partials [][]int) (best, xbest, ybest int) {
+	best, xbest, ybest = math.MinInt, math.MinInt, math.MinInt
 
-	// for _, row := range singles {
-	// 	for _, val := range row {
-	// 		fmt.Printf("% d ", val)
-	// 	}
-	// 	fmt.Printf("\n")
-	// }
+	// easier to track the bottom right corner for the calculations ...
+	for y := d - 1; y < len(partials); y++ {
+		for x := d - 1; x < len(partials[y]); x++ {
+			n := partials[y][x]
+			if x-d >= 0 {
+				n -= partials[y][x-d]
+				if y-d >= 0 {
+					n += partials[y-d][x-d]
+				}
+			}
+			if y-d >= 0 {
+				n -= partials[y-d][x]
+			}
 
-	for y := range subs {
-		for x := range subs[y] {
-			subs[y][x] = subValue(x, y, sub, singles)
+			if n > best {
+				best = n
+				xbest = x
+				ybest = y
+			}
 		}
 	}
 
-	return subs
+	// ... but the top-left corner is returned to the caller
+	return best, xbest + 1 - d, ybest + 1 - d
 }
 
 func openInput() io.Reader {
@@ -113,34 +136,18 @@ func ParseInput(input io.Reader) ParsedInput {
 	return ParsedInput(value)
 }
 
-func bestSubSquare(d int, singles [][]int) (best, xbest, ybest int) {
-	values := subValues(d, singles)
-	best, xbest, ybest = math.MinInt, math.MinInt, math.MinInt
-
-	for y, row := range values {
-		for x, val := range row {
-			if val > best {
-				xbest, ybest = x, y
-				best = val
-			}
-		}
-	}
-
-	return
-}
-
 func DoPart1(input ParsedInput) Part1Result {
-	singles := singleValues(300, int(input))
-	_, xbest, ybest := bestSubSquare(3, singles)
+	partials := partials(300, int(input))
+	_, xbest, ybest := bestSubSquare(3, partials)
 	return Part1Result(fmt.Sprintf("%d,%d", xbest+1, ybest+1))
 }
 
 func DoPart2(input ParsedInput) Part2Result {
-	singles := singleValues(300, int(input))
+	partials := partials(300, int(input))
 	best, xbest, ybest, dbest := math.MinInt, 0, 0, 0
 
 	for d := 1; d < 300; d++ {
-		val, x, y := bestSubSquare(d, singles)
+		val, x, y := bestSubSquare(d, partials)
 		if val > best {
 			best, xbest, ybest, dbest = val, x, y, d
 		}
