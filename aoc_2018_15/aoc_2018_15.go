@@ -2,7 +2,7 @@ package aoc_2018_15
 
 import (
 	"bufio"
-	"container/heap"
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -24,36 +24,11 @@ type Part2Result int
 const Part2Fake = 0xDEAD_BEEF
 const Part2Want = 0xBAAD_F00D
 
-const MAX_HP = 200
-const ATTACK_POWER = 3
-
-func absdiff(a, b int) int {
-	if a > b {
-		return a - b
-	}
-	return b - a
-}
+const maxHP = 200
+const defaultAttackPower = 3
+const TeamElf = 'E'
 
 type Point struct{ x, y int }
-
-func (p1 Point) Less(p2 Point) bool {
-	if p1.y == p2.y {
-		return p1.x < p2.x
-	}
-	return p1.y < p2.y
-}
-
-type ReadingOrder []Point
-
-func (a ReadingOrder) Len() int      { return len(a) }
-func (a ReadingOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a ReadingOrder) Less(i, j int) bool {
-	return a[i].Less(a[j])
-}
-
-func (a Point) Manhattan(b Point) int {
-	return absdiff(a.x, b.x) + absdiff(a.y, b.y)
-}
 
 func (p Point) Neighbors() []Point {
 	return []Point{
@@ -68,16 +43,32 @@ func (p Point) String() string {
 	return fmt.Sprintf("(%d, %d)", p.x, p.y)
 }
 
+type ReadingOrder []Point
+
+func (a ReadingOrder) Len() int      { return len(a) }
+func (a ReadingOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ReadingOrder) Less(i, j int) bool {
+	p1, p2 := a[i], a[j]
+	if p1.y == p2.y {
+		return p1.x < p2.x
+	}
+	return p1.y < p2.y
+}
+
 type Unit struct {
 	pos  Point
 	team byte
 	hp   int
 }
 
+func (u *Unit) isElf() bool {
+	return u.team == TeamElf
+}
+
 type Arena struct {
-	walls  map[Point]bool
-	units  map[Point]*Unit
-	noMove map[Point]bool
+	walls map[Point]bool
+	units map[Point]*Unit
+	elfAP int
 }
 
 func (a *Arena) adjacentTarget(u *Unit) *Unit {
@@ -96,10 +87,14 @@ func (a *Arena) adjacentTarget(u *Unit) *Unit {
 }
 
 func (a *Arena) attack(attacker *Unit, target *Unit) {
-	target.hp -= ATTACK_POWER
-	if target.hp < 0 {
+	attackPower := defaultAttackPower
+	if attacker.isElf() {
+		attackPower = a.elfAP
+	}
+
+	target.hp -= attackPower
+	if target.hp <= 0 {
 		delete(a.units, target.pos)
-		a.noMove = map[Point]bool{}
 	}
 }
 
@@ -111,187 +106,58 @@ func (a *Arena) done() bool {
 	return len(teams) == 1
 }
 
-func (a *Arena) openNeighborsOfEnemies(u *Unit) []Point {
-	added := map[Point]bool{}
-	dests := make([]Point, 0)
-	for _, e := range a.units {
-		if e.team == u.team {
-			continue
-		}
-		for _, xy := range a.openNeighbors(e.pos) {
-			if !added[xy] {
-				added[xy] = true
-				dests = append(dests, xy)
-			}
+func (a *Arena) elfCount() int {
+	n := 0
+	for _, u := range a.units {
+		if u.isElf() {
+			n++
 		}
 	}
-	return dests
+	return n
 }
-
-type Partial struct {
-	dsts []Point
-	path []Point
-}
-
-func (p Partial) complete() bool {
-	if len(p.path) == 0 {
-		return false
-	}
-	pos := p.pos()
-	for _, dst := range p.dsts {
-		if pos == dst {
-			return true
-		}
-	}
-	return false
-}
-
-func (p Partial) heur() int {
-	cost := int(^uint(0) >> 1)
-
-	pos := p.pos()
-	for _, dst := range p.dsts {
-		man := pos.Manhattan(dst)
-		if man < cost {
-			cost = man
-		}
-	}
-
-	cost += len(p.path)
-	return cost
-}
-
-func (p Partial) pos() Point {
-	return p.path[len(p.path)-1]
-}
-
-func (p Partial) String() string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "%s heur=%d : %s", p.pos(), p.heur(), p.path)
-	return sb.String()
-}
-
-type Partials []Partial
-
-func (p Partials) Len() int { return len(p) }
-func (p Partials) Less(i, j int) bool {
-	if p[i].heur() == p[j].heur() {
-		if len(p[i].path) < 2 || len(p[j].path) < 2 {
-			return false
-		}
-		return p[i].path[1].Less(p[j].path[1])
-	}
-	return p[i].heur() < p[j].heur()
-}
-func (p Partials) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
-
-func (p *Partials) Push(x any) {
-	*p = append(*p, x.(Partial))
-}
-
-func (p *Partials) Pop() any {
-	old := *p
-	n := len(old)
-	x := old[n-1]
-	*p = old[0 : n-1]
-	return x
-}
-
-var debugMove bool = false
 
 func (a *Arena) move(u *Unit) {
-	if a.noMove[u.pos] {
-		return
-	}
-
+	// I originally coded an A-star search with a manhattan-distance
+	// based heuristic, but it was very slow with my input. Simple BFS
+	// is fast and works well with the tie-breaking requirement.
 	dests := a.openNeighborsOfEnemies(u)
 	if len(dests) == 0 {
 		return
 	}
-	if debugMove {
-		fmt.Println("Destinations", dests)
-	}
 
-	parts := &Partials{}
-	heap.Init(parts)
-	heap.Push(parts, Partial{dests, []Point{u.pos}})
+	paths := [][]Point{[]Point{u.pos}}
+	seen := map[Point]bool{}
 
-	type Best struct {
-		cost  int
-		first Point
-	}
-	bestSeen := map[Point]Best{}
+	for len(paths) > 0 {
+		path := paths[0]
 
-	for len(*parts) > 0 {
-		part := heap.Pop(parts).(Partial)
-		// debugMove = debugMove || (part.path[0].x == 26 && part.path[0].y == 16)
+		paths[0] = nil
+		paths = paths[1:]
 
-		if debugMove {
-			fmt.Println("Exploring", part)
-		}
-		if part.complete() {
-			// for _, foo := range *parts {
-			// 	fmt.Println(foo)
-			// }
-			// fmt.Println("Complete with ", part)
-			u.pos = part.path[1]
-			a.noMove = map[Point]bool{}
+		pos := path[len(path)-1]
+		if dests[pos] {
+			u.pos = path[1]
 			return
 		}
 
-		newLen := len(part.path) + 1
-		for _, next := range a.openNeighbors(part.pos()) {
-			// for _, seen := range part.path {
-			// 	if seen == next {
-			// 		if debugMove {
-			// 			fmt.Println("Avoiding loopback to ", next, " given path ", part.path)
-			// 		}
-			// 		continue Next
-			// 	}
-			// }
-
-			var first Point
-			if len(part.path) > 1 {
-				first = part.path[1]
-			} else {
-				first = next
+		newLen := len(path) + 1
+		for _, next := range a.openNeighbors(pos) {
+			if seen[next] {
+				continue
 			}
+			seen[next] = true
 
-			if best, ok := bestSeen[next]; ok {
-				if best.cost < newLen {
-					continue // prune, beaten on pure cost
-				}
-				if best.cost == newLen && best.first.Less(first) {
-					continue // prune, beaten on first step reading order
-				}
-			}
-
-			bestSeen[next] = Best{newLen, first}
-			path := make([]Point, len(part.path), newLen)
-			copy(path, part.path)
-			path = append(path, next)
-			nextPart := Partial{part.dsts, path}
-			if debugMove {
-				fmt.Println("Adding", nextPart)
-			}
-			heap.Push(parts, nextPart)
+			newPath := make([]Point, newLen-1, newLen)
+			copy(newPath, path)
+			newPath = append(newPath, next)
+			paths = append(paths, newPath)
 		}
 	}
-
-	a.noMove[u.pos] = true
 }
 
 func (a *Arena) openNeighbors(o Point) []Point {
 	points := make([]Point, 0, 4)
 	for _, p := range o.Neighbors() {
-		// if p.x == 21 && p.y == 14 {
-		// 	if a.walls[p] {
-		// 		fmt.Println("Dropping", p, "due to wall")
-		// 	} else if a.units[p] != nil {
-		// 		fmt.Println("Dropping", p, "due to unit")
-		// 		fmt.Println(a)
-		// 	}
-		// }
 		if !a.walls[p] && a.units[p] == nil {
 			points = append(points, p)
 		}
@@ -299,33 +165,40 @@ func (a *Arena) openNeighbors(o Point) []Point {
 	return points
 }
 
+func (a *Arena) openNeighborsOfEnemies(u *Unit) map[Point]bool {
+	set := map[Point]bool{}
+	for _, e := range a.units {
+		if e.team == u.team {
+			continue
+		}
+		for _, xy := range a.openNeighbors(e.pos) {
+			set[xy] = true
+		}
+	}
+	return set
+}
+
 func (a *Arena) Run() int {
 	rounds := 0
-	// fmt.Println("Round", rounds)
-	// fmt.Println(a)
 	for {
-		//debugMove = rounds == 24
-		for n, pos := range a.turnOrder() {
-			if debugMove {
-				fmt.Println("Round", rounds, "Turn", n, pos)
-			}
-			if a.done() {
-				return rounds
-			}
-
+		for _, pos := range a.turnOrder() {
 			u := a.units[pos]
-			delete(a.units, pos)
 			if u == nil {
 				// unit died before its turn this round
 				continue
 			}
+
+			if a.done() {
+				return rounds
+			}
+
+			delete(a.units, pos)
+
 			a.takeTurn(u)
 			a.units[u.pos] = u
 		}
 
 		rounds++
-		fmt.Println("Round", rounds)
-		//fmt.Println(a)
 	}
 }
 
@@ -396,14 +269,6 @@ func (a *Arena) turnOrder() []Point {
 	return points
 }
 
-// Board with Walls, Spaces, Units
-// Units
-// - have hitpoints
-// - have attack power
-// - must be able to enumerate all enemies
-// - run same combat logic
-// Pathfinding, collision avoidance, shortest path, tiebroken on first step reading order
-
 func openInput() io.Reader {
 	reader, err := os.Open(inputFile)
 	if err != nil {
@@ -414,9 +279,9 @@ func openInput() io.Reader {
 
 func ParseInput(input io.Reader) *Arena {
 	a := Arena{
-		walls:  map[Point]bool{},
-		units:  map[Point]*Unit{},
-		noMove: map[Point]bool{},
+		walls: map[Point]bool{},
+		units: map[Point]*Unit{},
+		elfAP: defaultAttackPower,
 	}
 	lines := bufio.NewScanner(input)
 	for y := 0; lines.Scan(); y++ {
@@ -426,7 +291,7 @@ func ParseInput(input io.Reader) *Arena {
 				a.walls[Point{x, y}] = true
 			case 'G', 'E':
 				p := Point{x, y}
-				a.units[p] = &Unit{p, byte(c), MAX_HP}
+				a.units[p] = &Unit{p, byte(c), maxHP}
 			}
 		}
 	}
@@ -437,22 +302,38 @@ func DoPart1(arena *Arena) Part1Result {
 	rounds := arena.Run()
 	hp := arena.SumHP()
 	result := rounds * hp
-	fmt.Println("Rounds", rounds, "HP", hp, "Result", result)
-	fmt.Println(arena)
-	// 222852 is too low
 	return Part1Result(result)
 }
 
-func DoPart2(arena *Arena) Part2Result {
-	return Part2Fake
+func DoPart2(reader io.Reader) Part2Result {
+	input, err := io.ReadAll(reader)
+	if err != nil {
+		panic(err)
+	}
+
+	var arena *Arena
+	var rounds int
+	deadElves := 1
+	for ap := 1; deadElves != 0; ap++ {
+		arena = ParseInput(bytes.NewReader(input))
+		arena.elfAP = ap
+		elvesBefore := arena.elfCount()
+		rounds = arena.Run()
+		deadElves = elvesBefore - arena.elfCount()
+	}
+
+	outcome := arena.SumHP() * rounds
+	fmt.Println("===============================================================================")
+	fmt.Println(arena)
+	fmt.Printf("Outcome: %d * %d = %d\n", rounds, arena.SumHP(), outcome)
+	return Part2Result(outcome)
 }
 
 func Part1() Part1Result {
-	//return Part1Fake
-	//debugMove = true
 	return DoPart1(ParseInput(openInput()))
 }
 
 func Part2() Part2Result {
-	return DoPart2(ParseInput(openInput()))
+	return DoPart2(openInput())
+	// 54680 too low (guessed 56047 in case rounds was off by one, but it's too high)
 }

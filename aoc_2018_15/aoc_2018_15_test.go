@@ -103,11 +103,43 @@ func TestPart1Example6(t *testing.T) {
 	}
 }
 
-func TestPart2Examples(t *testing.T) {
-	const want = Part2Want
-	got := DoPart2(ParseInput(strings.NewReader(Example1)))
+func TestPart2Example1(t *testing.T) {
+	const want = 4988
+	got := DoPart2(strings.NewReader(Example1))
 	if got != want {
 		t.Errorf("DoPart2(Example1) got %v, wanted %v", got, want)
+	}
+}
+
+func TestPart2Example3(t *testing.T) {
+	const want = 31284
+	got := DoPart2(strings.NewReader(Example3))
+	if got != want {
+		t.Errorf("DoPart2(Example3) got %v, wanted %v", got, want)
+	}
+}
+
+func TestPart2Example4(t *testing.T) {
+	const want = 3478
+	got := DoPart2(strings.NewReader(Example4))
+	if got != want {
+		t.Errorf("DoPart2(Example4) got %v, wanted %v", got, want)
+	}
+}
+
+func TestPart2Example5(t *testing.T) {
+	const want = 6474
+	got := DoPart2(strings.NewReader(Example5))
+	if got != want {
+		t.Errorf("DoPart2(Example5) got %v, wanted %v", got, want)
+	}
+}
+
+func TestPart2Example6(t *testing.T) {
+	const want = 1140
+	got := DoPart2(strings.NewReader(Example6))
+	if got != want {
+		t.Errorf("DoPart2(Example6) got %v, wanted %v", got, want)
 	}
 }
 
