@@ -10,8 +10,6 @@ import (
 	"strings"
 )
 
-var _ = fmt.Println
-
 const inputFile = "input.txt"
 
 type Part1Result int
@@ -22,7 +20,7 @@ const Part1Want = 269_430
 type Part2Result int
 
 const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 55_160
 
 const maxHP = 200
 const defaultAttackPower = 3
@@ -43,16 +41,19 @@ func (p Point) String() string {
 	return fmt.Sprintf("(%d, %d)", p.x, p.y)
 }
 
+func (p1 Point) Less(p2 Point) bool {
+	if p1.y == p2.y {
+		return p1.x < p2.x
+	}
+	return p1.y < p2.y
+}
+
 type ReadingOrder []Point
 
 func (a ReadingOrder) Len() int      { return len(a) }
 func (a ReadingOrder) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a ReadingOrder) Less(i, j int) bool {
-	p1, p2 := a[i], a[j]
-	if p1.y == p2.y {
-		return p1.x < p2.x
-	}
-	return p1.y < p2.y
+	return a[i].Less(a[j])
 }
 
 type Unit struct {
@@ -116,29 +117,77 @@ func (a *Arena) elfCount() int {
 	return n
 }
 
+func getBestMove(paths [][]Point, dests map[Point]bool) Point {
+	// The path selection conditions are excrutiatingly
+	// tedious. Based on reddit threads, the minute details
+	// here matter for some people's inputs but not others.
+	//
+	// Once all shortest length paths to all destinations have
+	// been found, the winning path is selected first based on
+	// the reading order of the destination square, then based
+	// on the reading order of the first step in the path.
+	//
+	// For all of the examples and Part 1, it is sufficient to
+	// use the first shortest path found by seeding BFS with
+	// the initial steps in reading order.
+	//
+	// However, for part 2 of my input, the destination square
+	// tiebreaker makes a difference, and causes a unit to
+	// take a later-in-reading-order first step in order to
+	// move towards an earlier-in-reading-order destination
+	// square.
+
+	bestPath := paths[0]
+	paths = paths[1:]
+	bestLen := len(bestPath)
+	bestPos := bestPath[bestLen-1]
+
+	for _, p := range paths {
+		if len(p) > bestLen {
+			break
+		}
+
+		pd := p[len(p)-1]
+		switch {
+		case !dests[pd]: // not a dest
+			continue
+		case bestPos.Less(pd): // worse dest
+			continue
+		case pd.Less(bestPos): // better dest
+			fallthrough
+		case p[1].Less(bestPath[1]): // better first step (same dest)
+			bestPos = pd
+			bestPath = p
+		default:
+			continue
+		}
+	}
+
+	return bestPath[1]
+}
+
 func (a *Arena) move(u *Unit) {
-	// I originally coded an A-star search with a manhattan-distance
-	// based heuristic, but it was very slow with my input. Simple BFS
-	// is fast and works well with the tie-breaking requirement.
 	dests := a.openNeighborsOfEnemies(u)
 	if len(dests) == 0 {
 		return
 	}
 
+	// BFS. Current work item is always shortest and earliest in
+	// reading order.
 	paths := [][]Point{[]Point{u.pos}}
 	seen := map[Point]bool{}
 
 	for len(paths) > 0 {
 		path := paths[0]
 
-		paths[0] = nil
-		paths = paths[1:]
-
 		pos := path[len(path)-1]
 		if dests[pos] {
-			u.pos = path[1]
+			u.pos = getBestMove(paths, dests)
 			return
 		}
+
+		paths[0] = nil
+		paths = paths[1:]
 
 		newLen := len(path) + 1
 		for _, next := range a.openNeighbors(pos) {
@@ -311,10 +360,13 @@ func DoPart2(reader io.Reader) Part2Result {
 		panic(err)
 	}
 
+	// I originally used binary search, but reddit says for some
+	// inputs there are failing cases with higher AP values than
+	// success cases. It's fast enough to just count up.
 	var arena *Arena
 	var rounds int
 	deadElves := 1
-	for ap := 1; deadElves != 0; ap++ {
+	for ap := defaultAttackPower + 1; deadElves != 0; ap++ {
 		arena = ParseInput(bytes.NewReader(input))
 		arena.elfAP = ap
 		elvesBefore := arena.elfCount()
@@ -323,9 +375,6 @@ func DoPart2(reader io.Reader) Part2Result {
 	}
 
 	outcome := arena.SumHP() * rounds
-	fmt.Println("===============================================================================")
-	fmt.Println(arena)
-	fmt.Printf("Outcome: %d * %d = %d\n", rounds, arena.SumHP(), outcome)
 	return Part2Result(outcome)
 }
 
@@ -335,5 +384,4 @@ func Part1() Part1Result {
 
 func Part2() Part2Result {
 	return DoPart2(openInput())
-	// 54680 too low (guessed 56047 in case rounds was off by one, but it's too high)
 }

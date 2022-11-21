@@ -111,6 +111,9 @@ func TestPart2Example1(t *testing.T) {
 	}
 }
 
+// The problem skips over Example2 for part 2, but the writing is
+// extremely confusing.
+
 func TestPart2Example3(t *testing.T) {
 	const want = 31284
 	got := DoPart2(strings.NewReader(Example3))
