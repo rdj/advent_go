@@ -39,6 +39,13 @@ type Part2Result int
 
 const Part2Want = 1004
 
+func absdiff(n, m int) int {
+	if n > m {
+		return n - m
+	}
+	return m - n
+}
+
 type Point struct{ x, y int }
 
 func (p Point) Neighbors() []Point {
@@ -55,6 +62,10 @@ func (p Point) Neighbors() []Point {
 
 func (a Point) Eq(b Point) bool {
 	return a.x == b.x && a.y == b.y
+}
+
+func (a Point) Manhattan(b Point) int {
+	return absdiff(a.x, b.x) + absdiff(a.y, b.y)
 }
 
 func (p Point) Up() Point {
@@ -146,6 +157,7 @@ type Path struct {
 	pos  Point
 	cost int
 	tool int
+	heur int
 }
 
 func (p *Path) Branch(c *Cave, n Point) *Path {
@@ -157,11 +169,23 @@ func (p *Path) Branch(c *Cave, n Point) *Path {
 	if p.tool&nter == 0 {
 		newp.SetTool(nter | c.Terrain(p.pos))
 	}
+
+	newp.heur = n.Manhattan(c.target)
+	if newp.tool != torch {
+		newp.heur += toolCost
+	}
+
 	return &newp
 }
 
 func (p1 *Path) Less(p2 *Path) bool {
-	return p1.cost < p2.cost
+	h1 := p1.cost + p1.heur
+	h2 := p2.cost + p2.heur
+
+	if h1 == h2 {
+		return p1.cost < p2.cost
+	}
+	return h1 < h2
 }
 
 func (p *Path) Seen() Seen {
@@ -203,6 +227,7 @@ func (c *Cave) ShortestPathLength() int {
 
 	p := new(Path)
 	p.tool = torch
+	p.heur = p.pos.Manhattan(c.target)
 	heap.Push(toVisit, p)
 
 	for {
@@ -213,24 +238,24 @@ func (c *Cave) ShortestPathLength() int {
 		}
 		visited[ps] = true
 
-		if p.pos.Eq(c.target) {
-			if p.tool == torch {
-				return p.cost
-			} else {
-				b := *p
-				b.SetTool(torch)
-				bs := b.Seen()
-				c, found := cost[bs]
-				if !found || b.cost < c {
-					cost[bs] = b.cost
-					heap.Push(toVisit, &b)
-				}
-				continue
-			}
+		if p.pos.Eq(c.target) && p.tool == torch {
+			return p.cost
 		}
 
+		branches := make([]*Path, 0, 4)
 		for _, n := range p.pos.Neighbors() {
-			b := p.Branch(c, n)
+			branches = append(branches, p.Branch(c, n))
+		}
+		// May need a final step that has no movement, only a tool
+		// change
+		if p.pos.Eq(c.target) {
+			b := *p
+			b.SetTool(torch)
+			b.heur = 0
+			branches = append(branches, &b)
+		}
+
+		for _, b := range branches {
 			bs := b.Seen()
 			if visited[bs] {
 				continue
