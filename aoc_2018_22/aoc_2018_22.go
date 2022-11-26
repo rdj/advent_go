@@ -2,10 +2,10 @@ package aoc_2018_22
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"io"
 	"os"
-	"strings"
 )
 
 const (
@@ -13,24 +13,31 @@ const (
 	yMultiplier = 48271 // prime
 	modulus     = 20183 // prime
 
-	rocky  = 0
-	wet    = 1
-	narrow = 2
-)
+	//         N  W  R
+	// None    1  1  0
+	// Gear    0  1  1
+	// Torch   1  0  1
 
-var _ = fmt.Println
+	rocky  = 0b001
+	wet    = 0b010
+	narrow = 0b100
+
+	noTool = 0b110
+	gear   = 0b011
+	torch  = 0b101
+
+	toolCost = 7
+)
 
 const inputFile = "input.txt"
 
 type Part1Result int
 
-const Part1Fake = 0xDEAD_BEEF
 const Part1Want = 10204
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 1004
 
 type Point struct{ x, y int }
 
@@ -79,6 +86,36 @@ func NewCave() *Cave {
 	return c
 }
 
+func (c *Cave) Erosion(p Point) int {
+	if e, ok := c.ero[p]; ok {
+		return e
+	}
+
+	e := (c.Geology(p) + c.depth) % modulus
+	c.ero[p] = e
+	return e
+}
+
+func (c *Cave) Risk(p Point) int {
+	return c.Erosion(p) % 3
+}
+
+func (c *Cave) Terrain(p Point) int {
+	return 1 << c.Risk(p)
+}
+
+func (c *Cave) TotalRisk() int {
+	risk := 0
+	p := Point{}
+	for p.y = 0; p.y <= c.target.y; p.y++ {
+		for p.x = 0; p.x <= c.target.x; p.x++ {
+			risk += c.Risk(p)
+		}
+	}
+
+	return risk
+}
+
 func (c *Cave) Geology(p Point) int {
 	if g, ok := c.geo[p]; ok {
 		return g
@@ -105,30 +142,107 @@ func (c *Cave) Geology(p Point) int {
 	return g
 }
 
-func (c *Cave) Erosion(p Point) int {
-	if e, ok := c.ero[p]; ok {
-		return e
+type Path struct {
+	pos  Point
+	cost int
+	tool int
+}
+
+func (p *Path) Branch(c *Cave, n Point) *Path {
+	newp := *p
+	newp.pos = n
+	newp.cost++
+
+	nter := c.Terrain(n)
+	if p.tool&nter == 0 {
+		newp.SetTool(nter | c.Terrain(p.pos))
 	}
-
-	e := (c.Geology(p) + c.depth) % modulus
-	c.ero[p] = e
-	return e
+	return &newp
 }
 
-func (c *Cave) Terrain(p Point) int {
-	return c.Erosion(p) % 3
+func (p1 *Path) Less(p2 *Path) bool {
+	return p1.cost < p2.cost
 }
 
-func (c *Cave) TotalRisk() int {
-	risk := 0
-	p := Point{}
-	for p.y = 0; p.y <= c.target.y; p.y++ {
-		for p.x = 0; p.x <= c.target.x; p.x++ {
-			risk += c.Terrain(p)
+func (p *Path) Seen() Seen {
+	return Seen{p.pos, p.tool}
+}
+
+func (p *Path) SetTool(tool int) {
+	p.tool = tool
+	p.cost += toolCost
+}
+
+type Paths []*Path
+
+func (p Paths) Len() int           { return len(p) }
+func (p Paths) Less(i, j int) bool { return p[i].Less(p[j]) }
+func (p Paths) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+func (p *Paths) Push(x any)        { *p = append(*p, x.(*Path)) }
+
+func (p *Paths) Pop() any {
+	old := *p
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	*p = old[0 : n-1]
+	return item
+}
+
+type Seen struct {
+	p    Point
+	tool int
+}
+
+func (c *Cave) ShortestPathLength() int {
+	// Using Dijkstra
+	cost := map[Seen]int{}
+	visited := map[Seen]bool{}
+	toVisit := new(Paths)
+	heap.Init(toVisit)
+
+	p := new(Path)
+	p.tool = torch
+	heap.Push(toVisit, p)
+
+	for {
+		p = heap.Pop(toVisit).(*Path)
+		ps := p.Seen()
+		if visited[ps] {
+			continue
+		}
+		visited[ps] = true
+
+		if p.pos.Eq(c.target) {
+			if p.tool == torch {
+				return p.cost
+			} else {
+				b := *p
+				b.SetTool(torch)
+				bs := b.Seen()
+				c, found := cost[bs]
+				if !found || b.cost < c {
+					cost[bs] = b.cost
+					heap.Push(toVisit, &b)
+				}
+				continue
+			}
+		}
+
+		for _, n := range p.pos.Neighbors() {
+			b := p.Branch(c, n)
+			bs := b.Seen()
+			if visited[bs] {
+				continue
+			}
+
+			c, found := cost[bs]
+			if !found || b.cost < c {
+				cost[bs] = b.cost
+				heap.Push(toVisit, b)
+			}
 		}
 	}
-
-	return risk
 }
 
 func openInput() io.Reader {
@@ -156,51 +270,12 @@ func ParseInput(input io.Reader) *Cave {
 	return c
 }
 
-type Grid [][]int
-
-func (g Grid) String() string {
-	sb := new(strings.Builder)
-	for y, row := range g {
-		if y > 0 {
-			sb.WriteByte('\n')
-		}
-		for _, n := range row {
-			fmt.Fprintf(sb, "%7d", n)
-		}
-	}
-	return sb.String()
-}
-
-type Terrain [][]int
-
-func (g Terrain) String() string {
-	sb := new(strings.Builder)
-	for y, row := range g {
-		if y > 0 {
-			sb.WriteByte('\n')
-		}
-		for _, n := range row {
-			var b byte
-			switch n % 3 {
-			case 0:
-				b = '.'
-			case 1:
-				b = '='
-			case 2:
-				b = '|'
-			}
-			sb.WriteByte(b)
-		}
-	}
-	return sb.String()
-}
-
 func DoPart1(c *Cave) Part1Result {
 	return Part1Result(c.TotalRisk())
 }
 
 func DoPart2(c *Cave) Part2Result {
-	return Part2Fake
+	return Part2Result(c.ShortestPathLength())
 }
 
 func Part1() Part1Result {

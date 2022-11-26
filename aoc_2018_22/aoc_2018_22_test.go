@@ -20,7 +20,7 @@ func TestPart1Examples(t *testing.T) {
 
 func TestPart2Examples(t *testing.T) {
 	egs := map[string]Part2Result{
-		"depth: 510\ntarget: 10,10\n": Part2Want,
+		"depth: 510\ntarget: 10,10\n": 45,
 	}
 
 	for in, want := range egs {
