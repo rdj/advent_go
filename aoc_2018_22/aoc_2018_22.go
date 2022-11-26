@@ -183,7 +183,7 @@ func (p1 *Path) Less(p2 *Path) bool {
 	h2 := p2.cost + p2.heur
 
 	if h1 == h2 {
-		return p1.cost < p2.cost
+		return p1.heur < p2.heur
 	}
 	return h1 < h2
 }
@@ -219,7 +219,11 @@ type Seen struct {
 }
 
 func (c *Cave) ShortestPathLength() int {
-	// Using Dijkstra
+	// Started with Dijkstra, then added an A-Star heuristic cost for
+	// big efficiency gain.
+	//
+	// Given our Part 2 input, Dijkstra visits ~798k nodes (runtime
+	// ~1.3s), but A-star cuts that to ~142k (runtime ~0.4s).
 	cost := map[Seen]int{}
 	visited := map[Seen]bool{}
 	toVisit := new(Paths)
