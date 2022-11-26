@@ -32,9 +32,103 @@ type Part2Result int
 const Part2Fake = 0xDEAD_BEEF
 const Part2Want = 0xBAAD_F00D
 
-type ParsedInput struct {
-	depth uint
-	x, y  int
+type Point struct{ x, y int }
+
+func (p Point) Neighbors() []Point {
+	n := make([]Point, 4)
+	if p.y > 0 {
+		n = append(n, p.Up())
+	}
+	if p.x > 0 {
+		n = append(n, p.Left())
+	}
+	n = append(n, p.Right(), p.Down())
+	return n
+}
+
+func (a Point) Eq(b Point) bool {
+	return a.x == b.x && a.y == b.y
+}
+
+func (p Point) Up() Point {
+	return Point{p.x, p.y - 1}
+}
+
+func (p Point) Left() Point {
+	return Point{p.x - 1, p.y}
+}
+
+func (p Point) Right() Point {
+	return Point{p.x + 1, p.y}
+}
+
+func (p Point) Down() Point {
+	return Point{p.x, p.y + 1}
+}
+
+type Cave struct {
+	depth    int
+	target   Point
+	geo, ero map[Point]int
+}
+
+func NewCave() *Cave {
+	c := new(Cave)
+	c.geo = make(map[Point]int)
+	c.ero = make(map[Point]int)
+	return c
+}
+
+func (c *Cave) Geology(p Point) int {
+	if g, ok := c.geo[p]; ok {
+		return g
+	}
+
+	var g int
+	switch {
+	case p.Eq(Point{0, 0}) || p.Eq(c.target):
+		g = 0
+	case p.Eq(Point{1, 0}):
+		g = xMultiplier
+	case p.y == 0:
+		g = c.Geology(p.Left()) + xMultiplier
+	case p.Eq(Point{0, 1}):
+		g = yMultiplier
+	case p.x == 0:
+		g = c.Geology(p.Up()) + yMultiplier
+	default:
+		g = c.Erosion(p.Left()) * c.Erosion(p.Up())
+	}
+
+	g %= modulus
+	c.geo[p] = g
+	return g
+}
+
+func (c *Cave) Erosion(p Point) int {
+	if e, ok := c.ero[p]; ok {
+		return e
+	}
+
+	e := (c.Geology(p) + c.depth) % modulus
+	c.ero[p] = e
+	return e
+}
+
+func (c *Cave) Terrain(p Point) int {
+	return c.Erosion(p) % 3
+}
+
+func (c *Cave) TotalRisk() int {
+	risk := 0
+	p := Point{}
+	for p.y = 0; p.y <= c.target.y; p.y++ {
+		for p.x = 0; p.x <= c.target.x; p.x++ {
+			risk += c.Terrain(p)
+		}
+	}
+
+	return risk
 }
 
 func openInput() io.Reader {
@@ -45,24 +139,24 @@ func openInput() io.Reader {
 	return reader
 }
 
-func ParseInput(input io.Reader) ParsedInput {
-	p := ParsedInput{}
+func ParseInput(input io.Reader) *Cave {
+	c := NewCave()
 
 	scanner := bufio.NewScanner(input)
 	if !scanner.Scan() {
 		panic("bad input")
 	}
-	fmt.Sscanf(scanner.Text(), "depth: %d", &p.depth)
+	fmt.Sscanf(scanner.Text(), "depth: %d", &c.depth)
 
 	if !scanner.Scan() {
 		panic("bad input")
 	}
-	fmt.Sscanf(scanner.Text(), "target: %d,%d", &p.x, &p.y)
+	fmt.Sscanf(scanner.Text(), "target: %d,%d", &c.target.x, &c.target.y)
 
-	return p
+	return c
 }
 
-type Grid [][]uint
+type Grid [][]int
 
 func (g Grid) String() string {
 	sb := new(strings.Builder)
@@ -77,7 +171,7 @@ func (g Grid) String() string {
 	return sb.String()
 }
 
-type Terrain [][]uint
+type Terrain [][]int
 
 func (g Terrain) String() string {
 	sb := new(strings.Builder)
@@ -101,57 +195,11 @@ func (g Terrain) String() string {
 	return sb.String()
 }
 
-func DoPart1(input ParsedInput) Part1Result {
-	geo := make([][]uint, input.y+1)
-	ero := make([][]uint, input.y+1)
-
-	for y := 0; y <= input.y; y++ {
-		geo[y] = make([]uint, input.x+1)
-		ero[y] = make([]uint, input.x+1)
-
-		for x := 0; x <= input.x; x++ {
-			switch {
-			case x == 0 && y == 0:
-				geo[y][x] = 0
-			case x == input.x && y == input.y:
-				geo[y][x] = 0
-			case x == 1 && y == 0:
-				geo[y][x] = xMultiplier
-			case y == 0:
-				geo[y][x] = geo[y][x-1] + xMultiplier
-			case x == 0 && y == 1:
-				geo[y][x] = yMultiplier
-			case x == 0:
-				geo[y][x] = geo[y-1][x] + yMultiplier
-			default:
-				geo[y][x] = ero[y][x-1] * ero[y-1][x]
-			}
-			geo[y][x] %= modulus
-			ero[y][x] = (geo[y][x] + input.depth) % modulus
-		}
-	}
-
-	// fmt.Println("Geological Index")
-	// fmt.Println(Grid(geo))
-	// fmt.Println()
-	// fmt.Println("Erosion")
-	// fmt.Println(Grid(ero))
-	// fmt.Println()
-	// fmt.Println("Terrain")
-	// fmt.Println(Terrain(ero))
-	// fmt.Println()
-
-	risk := uint(0)
-	for _, row := range ero {
-		for _, e := range row {
-			risk = (risk + e%3)
-		}
-	}
-
-	return Part1Result(risk)
+func DoPart1(c *Cave) Part1Result {
+	return Part1Result(c.TotalRisk())
 }
 
-func DoPart2(input ParsedInput) Part2Result {
+func DoPart2(c *Cave) Part2Result {
 	return Part2Fake
 }
 
