@@ -1,7 +1,6 @@
 package aoc_yyyy_mm
 
 import (
-	"reflect"
 	"strings"
 	"testing"
 )
@@ -13,7 +12,7 @@ func TestPart1Examples(t *testing.T) {
 
 	for in, want := range egs {
 		got := DoPart1(ParseInput(strings.NewReader(in)))
-		if !reflect.DeepEqual(got, want) {
+		if got != want {
 			t.Errorf("DoPart1(%q) got %v, wanted %v", in, got, want)
 		}
 	}
