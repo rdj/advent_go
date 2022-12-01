@@ -4,7 +4,7 @@ ME=$(basename "$0")
 MY_DIR=$(dirname "$0")
 DAY=$1
 #YEAR=${2:-$(date "+%Y")}
-YEAR=${2:-2018}
+YEAR=${2:-2022}
 
 if [ "${DAY}" == "" ]; then
     echo "usage: ${ME} day [year]" 1>&2
