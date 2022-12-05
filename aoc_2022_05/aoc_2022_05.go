@@ -80,6 +80,14 @@ func dump(stacks [][]byte) {
 	}
 }
 
+func result(stacks [][]byte) string {
+	sb := new(strings.Builder)
+	for _, s := range stacks {
+		sb.WriteByte(s[0])
+	}
+	return sb.String()
+}
+
 func DoPart1(stacks [][]byte, moves []Move) Part1Result {
 	for _, m := range moves {
 		for i := 0; i < m.n; i++ {
@@ -89,11 +97,7 @@ func DoPart1(stacks [][]byte, moves []Move) Part1Result {
 		}
 	}
 
-	sb := new(strings.Builder)
-	for _, s := range stacks {
-		sb.WriteByte(s[0])
-	}
-	return Part1Result(sb.String())
+	return Part1Result(result(stacks))
 }
 
 func DoPart2(stacks [][]byte, moves []Move) Part2Result {
@@ -104,11 +108,7 @@ func DoPart2(stacks [][]byte, moves []Move) Part2Result {
 		stacks[m.to] = append(src, stacks[m.to]...)
 	}
 
-	sb := new(strings.Builder)
-	for _, s := range stacks {
-		sb.WriteByte(s[0])
-	}
-	return Part2Result(sb.String())
+	return Part2Result(result(stacks))
 }
 
 func Part1() Part1Result {
