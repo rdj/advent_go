@@ -35,9 +35,11 @@ func (p Point) Up() Point {
 func (p Point) Down() Point {
 	return Point{p.x, p.y + 1}
 }
+
 func (p Point) Left() Point {
 	return Point{p.x - 1, p.y}
 }
+
 func (p Point) Right() Point {
 	return Point{p.x + 1, p.y}
 }
