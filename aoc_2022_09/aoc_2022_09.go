@@ -130,30 +130,11 @@ func ParseInput(input io.Reader) []Move {
 	return lines
 }
 
-func DoPart1(input []Move) Part1Result {
-	seen := map[Point]bool{}
-
-	head := Point{}
-	tail := head
-	seen[tail] = true
-
-	for _, m := range input {
-		for i := 0; i < m.n; i++ {
-			head = head.Move(m.d)
-			tail = tail.Follow(head)
-			seen[tail] = true
-		}
-	}
-
-	return Part1Result(len(seen))
-}
-
-func DoPart2(input []Move) Part2Result {
-	const snakeLen = 10
+func DoSnake(moves []Move, snakeLen int) int {
 	snake := make([]Point, snakeLen)
 	seen := map[Point]bool{}
 
-	for _, m := range input {
+	for _, m := range moves {
 		for i := 0; i < m.n; i++ {
 			snake[0] = snake[0].Move(m.d)
 
@@ -165,7 +146,17 @@ func DoPart2(input []Move) Part2Result {
 		}
 	}
 
-	return Part2Result(len(seen))
+	return len(seen)
+}
+
+func DoPart1(input []Move) Part1Result {
+	r := DoSnake(input, 2)
+	return Part1Result(r)
+}
+
+func DoPart2(input []Move) Part2Result {
+	r := DoSnake(input, 10)
+	return Part2Result(r)
 }
 
 func Part1() Part1Result {
