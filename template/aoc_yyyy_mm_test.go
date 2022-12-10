@@ -5,9 +5,13 @@ import (
 	"testing"
 )
 
+const (
+	Example1 = ``
+)
+
 func TestPart1Examples(t *testing.T) {
 	egs := map[string]Part1Result{
-		"PART1EXAMPLE": Part1Want,
+		Example1: Part1Want,
 	}
 
 	for in, want := range egs {
@@ -20,7 +24,7 @@ func TestPart1Examples(t *testing.T) {
 
 func TestPart2Examples(t *testing.T) {
 	egs := map[string]Part2Result{
-		"PART2EXAMPLE": Part2Want,
+		Example1: Part2Want,
 	}
 
 	for in, want := range egs {
