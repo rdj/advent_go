@@ -32,7 +32,10 @@ type Monkey struct {
 	inspections                 int
 }
 
-type Monkeys []*Monkey
+type Monkeys struct {
+	monkeys     []*Monkey
+	manageWorry func(int) int
+}
 
 func openInput() io.Reader {
 	reader, err := os.Open(inputFile)
@@ -70,7 +73,8 @@ func parseOp(op string) func(n int) int {
 }
 
 func ParseInput(input io.Reader) Monkeys {
-	monkeys := make(Monkeys, 0)
+	monkeys := Monkeys{}
+	monkeys.monkeys = make([]*Monkey, 0)
 	scanner := bufio.NewScanner(input)
 
 	for scanner.Scan() {
@@ -79,7 +83,7 @@ func ParseInput(input io.Reader) Monkeys {
 		}
 
 		m := new(Monkey)
-		monkeys = append(monkeys, m)
+		monkeys.monkeys = append(monkeys.monkeys, m)
 
 		_, err := fmt.Sscanf(scanner.Text(), "Monkey %d:", &m.number)
 		if err != nil {
@@ -134,10 +138,6 @@ func (m *Monkey) Catch(item int) {
 	m.items = append(m.items, item)
 }
 
-var ManageWorry func(n int) int = func(n int) int {
-	return n / 3
-}
-
 func (m *Monkey) ProcessOne(monkeys Monkeys) bool {
 	if len(m.items) == 0 {
 		return false
@@ -149,12 +149,12 @@ func (m *Monkey) ProcessOne(monkeys Monkeys) bool {
 	item = m.op(item)
 	m.inspections++
 
-	item = ManageWorry(item)
+	item = monkeys.manageWorry(item)
 
 	if item%m.factor == 0 {
-		monkeys[m.isFactor].Catch(item)
+		monkeys.monkeys[m.isFactor].Catch(item)
 	} else {
-		monkeys[m.notFactor].Catch(item)
+		monkeys.monkeys[m.notFactor].Catch(item)
 	}
 
 	return true
@@ -166,13 +166,13 @@ func (m *Monkey) Turn(monkeys Monkeys) {
 }
 
 func (monkeys Monkeys) Round() {
-	for _, m := range monkeys {
+	for _, m := range monkeys.monkeys {
 		m.Turn(monkeys)
 	}
 }
 
 func (m *Monkey) String() string {
-	return fmt.Sprintf("Monkey %d: %d", m.number, m.items)
+	return fmt.Sprintf("Monkey %d: %d (%d)", m.number, m.items, m.inspections)
 }
 
 func (monkeys Monkeys) Business(rounds int) int {
@@ -180,21 +180,24 @@ func (monkeys Monkeys) Business(rounds int) int {
 		monkeys.Round()
 	}
 
-	a := lo.Map(monkeys, func(m *Monkey, _ int) int { return m.inspections })
+	a := lo.Map(monkeys.monkeys, func(m *Monkey, _ int) int { return m.inspections })
 	sort.Sort(sort.Reverse(sort.IntSlice(a)))
 	return a[0] * a[1]
 }
 
 func DoPart1(monkeys Monkeys) Part1Result {
+	monkeys.manageWorry = func(n int) int {
+		return n / 3
+	}
 	return Part1Result(monkeys.Business(20))
 }
 
 func DoPart2(monkeys Monkeys) Part2Result {
 	modulus := 1
-	for _, m := range monkeys {
+	for _, m := range monkeys.monkeys {
 		modulus *= m.factor
 	}
-	ManageWorry = func(n int) int {
+	monkeys.manageWorry = func(n int) int {
 		return n % modulus
 	}
 
