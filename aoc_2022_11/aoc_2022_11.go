@@ -193,6 +193,21 @@ func DoPart1(monkeys Monkeys) Part1Result {
 }
 
 func DoPart2(monkeys Monkeys) Part2Result {
+	// We don't care about the actual worry values, since the answer
+	// is just calculated based on the number of inspections. We just
+	// need to make sure that however we keep our worry values
+	// manageable, it allows for addition, multiplication, and
+	// divisibility testing. Sounds like a job for modular arithmetic.
+	//
+	// Addtion and multiplication are going to be fine. Divisibility
+	// testing is the tricky one. There's some mathy reasoning here
+	// about integer rings and and stuff, but if you just think of it
+	// as a big cycle, it's going to be fine as long as the cycle
+	// length is a multiple of the divisor.
+	//
+	// In what is probably a further hint, in the input all the
+	// division tests use prime numbers. So we can find the LCM by
+	// just multiplying them all together.
 	modulus := 1
 	for _, m := range monkeys.monkeys {
 		modulus *= m.factor
