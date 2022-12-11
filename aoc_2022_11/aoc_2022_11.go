@@ -22,8 +22,7 @@ const Part1Want = 66124
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 19_309_892_877
 
 type Monkey struct {
 	number                      int
@@ -135,6 +134,10 @@ func (m *Monkey) Catch(item int) {
 	m.items = append(m.items, item)
 }
 
+var ManageWorry func(n int) int = func(n int) int {
+	return n / 3
+}
+
 func (m *Monkey) ProcessOne(monkeys Monkeys) bool {
 	if len(m.items) == 0 {
 		return false
@@ -146,7 +149,7 @@ func (m *Monkey) ProcessOne(monkeys Monkeys) bool {
 	item = m.op(item)
 	m.inspections++
 
-	item /= 3
+	item = ManageWorry(item)
 
 	if item%m.factor == 0 {
 		monkeys[m.isFactor].Catch(item)
@@ -172,18 +175,30 @@ func (m *Monkey) String() string {
 	return fmt.Sprintf("Monkey %d: %d", m.number, m.items)
 }
 
-func DoPart1(monkeys Monkeys) Part1Result {
-	for i := 0; i < 20; i++ {
+func (monkeys Monkeys) Business(rounds int) int {
+	for i := 0; i < rounds; i++ {
 		monkeys.Round()
 	}
 
 	a := lo.Map(monkeys, func(m *Monkey, _ int) int { return m.inspections })
 	sort.Sort(sort.Reverse(sort.IntSlice(a)))
-	return Part1Result(a[0] * a[1])
+	return a[0] * a[1]
+}
+
+func DoPart1(monkeys Monkeys) Part1Result {
+	return Part1Result(monkeys.Business(20))
 }
 
 func DoPart2(monkeys Monkeys) Part2Result {
-	return Part2Fake
+	modulus := 1
+	for _, m := range monkeys {
+		modulus *= m.factor
+	}
+	ManageWorry = func(n int) int {
+		return n % modulus
+	}
+
+	return Part2Result(monkeys.Business(10_000))
 }
 
 func Part1() Part1Result {
