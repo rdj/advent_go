@@ -152,9 +152,7 @@ func (hm *HeightMap) ShortestPathLength() int {
 	toVisit := new(Paths)
 	heap.Init(toVisit)
 
-	p := new(Path)
-	p.pos = hm.start
-	p.heur = p.pos.Manhattan(hm.dest)
+	p := &Path{pos: hm.start}
 	heap.Push(toVisit, p)
 
 	for toVisit.Len() > 0 {
