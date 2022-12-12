@@ -30,7 +30,7 @@ func absdiff(n, m int) int {
 type Point struct{ x, y int }
 
 func (p Point) Neighbors() []Point {
-	n := make([]Point, 4)
+	n := make([]Point, 0, 4)
 	if p.y > 0 {
 		n = append(n, p.Up())
 	}
@@ -195,18 +195,10 @@ func (hm *HeightMap) ShortestPathLength() int {
 		}
 	}
 
-	panic("found no path")
+	return int(^uint(0) >> 1)
 }
 
 func DoPart1(hm HeightMap) Part1Result {
-	// For some reason, for my input on part 1, I get 419 when aoc
-	// says the correct answer is 420. I tried submitting it just in
-	// case of an off-by-one bug. But the example works, and part 2
-	// works. I have no idea what is going on. I tried replacing my
-	// fancy pathfinding with just simple BFS, and runs much slower
-	// but still gives me all the same answers, including 419 for
-	// Part1.
-
 	return Part1Result(hm.ShortestPathLength())
 }
 
