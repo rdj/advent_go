@@ -49,7 +49,7 @@ func absdiff(n, m int) int {
 type Point struct{ x, y int }
 
 func (p Point) Neighbors() []Point {
-	n := make([]Point, 4)
+	n := make([]Point, 0, 4)
 	if p.y > 0 {
 		n = append(n, p.Up())
 	}
