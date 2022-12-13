@@ -5,9 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/samber/lo"
 )
 
 var _ = fmt.Println
+var _ = lo.Max[int]
 
 const inputFile = "input.txt"
 
