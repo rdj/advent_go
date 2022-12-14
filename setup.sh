@@ -26,5 +26,6 @@ for f in "${MY_DIR}/template/"*.go; do
 done
 cd "${PROJECT_DIR}"
 go mod init "rdj/${PROJECT}"
+go get
 emacsclient --no-wait *.go
 
