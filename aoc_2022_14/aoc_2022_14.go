@@ -31,14 +31,16 @@ const (
 )
 
 type Cave struct {
-	src   Point
-	state map[Point]byte
+	src      Point
+	state    map[Point]byte
+	min, max Point
 }
 
 func NewCave() Cave {
 	return Cave{
 		src:   Point{500, 0},
 		state: map[Point]byte{},
+		min:   Point{int(^uint(0) >> 1), 0},
 	}
 }
 
@@ -58,6 +60,15 @@ func (c *Cave) AddStone(a, b Point) {
 	p := a
 	for {
 		c.state[p] = Stone
+		if p.x < c.min.x {
+			c.min.x = p.x
+		}
+		if p.x > c.max.x {
+			c.max.x = p.x
+		}
+		if p.y > c.max.y {
+			c.max.y = p.y
+		}
 		if p == b {
 			break
 		}
@@ -66,17 +77,20 @@ func (c *Cave) AddStone(a, b Point) {
 }
 
 func (c *Cave) AddSand(inf bool) bool {
+	if _, ok := c.state[c.src]; ok {
+		return false
+	}
+
 	steps := []Point{
 		Point{0, 1},  // down
 		Point{-1, 1}, // down left
 		Point{1, 1},  // down right
 	}
-	maxy := c.MaxY()
 
 	p := c.src
 Fall:
 	for {
-		if p.y == maxy+1 {
+		if p.y == c.max.y+1 {
 			if inf {
 				return false
 			} else {
@@ -93,41 +107,18 @@ Fall:
 			}
 		}
 		c.state[p] = Sand
-		return !p.Eq(c.src)
+		return true
 	}
-}
-
-func (c *Cave) MinX() int {
-	return lo.Min(lo.Map(lo.Keys(c.state), func(p Point, _ int) int { return p.x }))
-}
-
-func (c *Cave) MaxX() int {
-	return lo.Max(lo.Map(lo.Keys(c.state), func(p Point, _ int) int { return p.x }))
-}
-
-func (c *Cave) MaxY() int {
-	return lo.Max(lo.FilterMap(lo.Keys(c.state), func(p Point, _ int) (int, bool) {
-		if c.state[p] == Stone {
-			return p.y, true
-		}
-		return 0, false
-	}))
 }
 
 func (c *Cave) String() string {
 	sb := new(strings.Builder)
 
-	var (
-		xmin = c.MinX()
-		xmax = c.MaxX()
-		ymax = c.MaxY()
-	)
-
-	for y := 0; y <= ymax; y++ {
+	for y := 0; y <= c.max.y; y++ {
 		if y > 0 {
 			sb.WriteByte('\n')
 		}
-		for x := xmin; x <= xmax; x++ {
+		for x := c.min.x; x <= c.max.x; x++ {
 			p := Point{x, y}
 			if b, ok := c.state[p]; ok {
 				sb.WriteByte(b)
@@ -187,7 +178,7 @@ func DoPart1(c Cave) Part1Result {
 }
 
 func DoPart2(c Cave) Part2Result {
-	i := 1
+	i := 0
 	for c.AddSand(false) {
 		i++
 	}
