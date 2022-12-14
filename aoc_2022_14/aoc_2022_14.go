@@ -31,16 +31,17 @@ const (
 )
 
 type Cave struct {
-	src      Point
-	state    map[Point]byte
-	min, max Point
+	src, min, max Point
+	state         map[Point]byte
 }
 
 func NewCave() Cave {
+	src := Point{500, 0}
 	return Cave{
-		src:   Point{500, 0},
+		src:   src,
+		min:   src,
+		max:   src,
 		state: map[Point]byte{},
-		min:   Point{int(^uint(0) >> 1), 0},
 	}
 }
 
