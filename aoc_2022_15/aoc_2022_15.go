@@ -72,7 +72,7 @@ func (ranges *Ranges) compact() {
 	after := Ranges{}
 	cum := (*ranges)[0]
 	for _, r := range (*ranges)[1:] {
-		if cum.b+1 >= r.a {
+		if cum.b+1 >= r.a { // +1 because no gaps between the ints, but solution works without it too
 			cum.b = max(cum.b, r.b)
 		} else {
 			after = append(after, cum)
