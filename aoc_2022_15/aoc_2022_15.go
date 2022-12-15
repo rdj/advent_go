@@ -53,12 +53,6 @@ func (a ByA) Len() int           { return len(a) }
 func (a ByA) Less(i, j int) bool { return a[i].a < a[j].a }
 func (a ByA) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
-type ByB Ranges
-
-func (a ByB) Len() int           { return len(a) }
-func (a ByB) Less(i, j int) bool { return a[i].b < a[j].b }
-func (a ByB) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
 func max(a, b int) int {
 	if a > b {
 		return a
