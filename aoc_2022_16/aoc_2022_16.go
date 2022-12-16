@@ -165,7 +165,10 @@ func (valves Valves) BestFlow(timeLimit int, twoActors bool) int {
 			np.flow += (timeLimit + 1 - np.actors[a].time) * valves[v].flow
 			np.open |= vflag
 
-			seen := Seen{pos: 2*toOpen[np.actors[0].pos] + 3*toOpen[np.actors[1].pos], open: np.open}
+			pos := vflag
+			pos |= 1 << toOpen[np.actors[(a+1)%2].pos]
+
+			seen := Seen{pos: pos, open: np.open}
 			if np.flow < best[seen] {
 				continue
 			}
