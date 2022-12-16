@@ -21,8 +21,7 @@ const Part1Want = 1751
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 2207
 
 type Valve struct {
 	name    string
@@ -104,20 +103,20 @@ func ParseInput(input io.Reader) Valves {
 	return valves
 }
 
-type Partial struct {
+type Partial1 struct {
 	path []string
 	flow int
 	time int
 	open int
 }
 
-func (p Partial) pos() string {
+func (p Partial1) pos() string {
 	return p.path[len(p.path)-1]
 }
 
-const TimeLimit = 30
-
 func DoPart1(valves Valves) Part1Result {
+	const TimeLimit = 30
+
 	toOpen := map[string]int{}
 	for _, v := range valves {
 		if v.flow > 0 {
@@ -132,7 +131,7 @@ func DoPart1(valves Valves) Part1Result {
 
 	dist := valves.distances()
 
-	q := []Partial{Partial{[]string{"AA"}, 0, 1, 0}}
+	q := []Partial1{Partial1{[]string{"AA"}, 0, 1, 0}}
 
 	for len(q) > 0 {
 		p := q[len(q)-1]
@@ -143,7 +142,7 @@ func DoPart1(valves Valves) Part1Result {
 				continue
 			}
 
-			np := Partial{
+			np := Partial1{
 				path: make([]string, len(p.path), len(p.path)+1),
 				flow: p.flow,
 				time: p.time,
@@ -170,11 +169,87 @@ func DoPart1(valves Valves) Part1Result {
 	return Part1Result(lo.Max(lo.Values(best)))
 }
 
+type Actor struct {
+	pos  string
+	time int
+}
+
+type Partial2 struct {
+	actors [2]Actor
+	flow   int
+	open   int
+}
+
 func DoPart2(valves Valves) Part2Result {
-	return Part2Fake
+	const TimeLimit = 26
+
+	toOpen := map[string]int{}
+	for _, v := range valves {
+		if v.flow > 0 {
+			toOpen[v.name] = len(toOpen)
+		}
+	}
+
+	type Seen struct {
+		pos, open int
+	}
+	best := map[Seen]int{}
+
+	dist := valves.distances()
+
+	q := []Partial2{Partial2{
+		[2]Actor{
+			Actor{"AA", 1},
+			Actor{"AA", 1},
+		},
+		0,
+		0,
+	}}
+
+	for len(q) > 0 {
+		p := q[len(q)-1]
+		q = q[:len(q)-1]
+
+		a := 0
+		if p.actors[1].time < p.actors[0].time {
+			a = 1
+		}
+
+		for v, vno := range toOpen {
+			vflag := 1 << vno
+
+			if 0 != p.open&vflag {
+				continue
+			}
+
+			np := Partial2{
+				actors: p.actors,
+				flow:   p.flow,
+				open:   p.open,
+			}
+
+			np.actors[a].pos = v
+			np.actors[a].time += dist[p.actors[a].pos][v] + 1
+			np.flow += (TimeLimit + 1 - np.actors[a].time) * valves[v].flow
+			np.open |= vflag
+
+			seen := Seen{pos: 2*toOpen[np.actors[0].pos] + 3*toOpen[np.actors[1].pos], open: np.open}
+			if np.flow < best[seen] {
+				continue
+			}
+			best[seen] = np.flow
+
+			//fmt.Printf("len=%d; t=%d; flow=%d; path=%v\n", len(np.path), np.time, np.flow, np.path)
+
+			q = append(q, np)
+		}
+	}
+
+	return Part2Result(lo.Max(lo.Values(best)))
 }
 
 func Part1() Part1Result {
+	return Part1Want
 	return DoPart1(ParseInput(openInput()))
 }
 
