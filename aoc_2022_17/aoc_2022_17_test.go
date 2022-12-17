@@ -24,7 +24,7 @@ func TestPart1Examples(t *testing.T) {
 
 func TestPart2Examples(t *testing.T) {
 	egs := map[string]Part2Result{
-		Example1: Part2Want,
+		Example1: 1_514_285_714_288,
 	}
 
 	for in, want := range egs {

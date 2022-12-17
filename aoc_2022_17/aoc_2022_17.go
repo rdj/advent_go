@@ -21,8 +21,7 @@ const Part1Want = 3098
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 1_525_364_431_487
 
 type Point struct{ x, y int }
 
@@ -94,6 +93,21 @@ func (p *Piece) TryMove(delta Point, width int, cave map[Point]bool) bool {
 }
 
 func play(moves string, width, totalPieces int) int {
+	type SeenKey struct {
+		shape, move int
+		caveTop     string
+	}
+	type SeenEntry struct {
+		n, height int
+	}
+
+	type Cycle struct {
+		n, h, length, delta, target int
+	}
+	var cycle *Cycle = nil
+
+	seen := map[SeenKey]*SeenEntry{}
+
 	height := 0
 	cave := map[Point]bool{}
 
@@ -101,6 +115,40 @@ func play(moves string, width, totalPieces int) int {
 
 	for n := 0; n < totalPieces; n++ {
 		p := NewPiece(n, height)
+
+		if cycle == nil {
+			sk := SeenKey{
+				n % len(shapes),
+				m % len(moves),
+				CaveString(cave, width, height, 15, p),
+			}
+			if last, ok := seen[sk]; ok {
+				// We can compute the height at the nearest cycle
+				// boundary, need to keep running since the
+				// totalPieces target falls in between cycle
+				// boundaries.
+
+				cycle = new(Cycle)
+				cycle.n = last.n
+				cycle.h = last.height
+				cycle.length = n - last.n
+				cycle.delta = height - last.height
+
+				piecesRemaining := totalPieces - cycle.n
+				extraPieces := piecesRemaining % cycle.length
+				cycle.target = n + extraPieces
+			} else {
+				seen[sk] = &SeenEntry{n, height}
+			}
+		}
+
+		if cycle != nil && n == cycle.target {
+			lastCycleCount := (n - cycle.n) / cycle.length
+			lastCycleHeight := cycle.h + lastCycleCount*cycle.delta
+			extra := height - lastCycleHeight
+
+			return cycle.h + (totalPieces-cycle.n)/cycle.length*cycle.delta + extra
+		}
 
 		for {
 			delta := Point{0, 0}
@@ -118,7 +166,7 @@ func play(moves string, width, totalPieces int) int {
 				if y+1 > height {
 					height = y + 1
 				}
-				//dump(cave, width, height)
+
 				break
 			}
 		}
@@ -127,19 +175,39 @@ func play(moves string, width, totalPieces int) int {
 	return height
 }
 
-func dump(cave map[Point]bool, width, height int) {
+func CaveString(cave map[Point]bool, width, height, maxLines int, p *Piece) string {
 	sb := new(strings.Builder)
-	for y := height; y >= 0; y-- {
+
+	minY := height - maxLines
+
+	piece := map[Point]bool{}
+	if p != nil {
+		for _, pt := range p.shape.at(p.pos) {
+			piece[pt] = true
+			if pt.y > height {
+				height = pt.y + 1
+			}
+		}
+	}
+
+	for y := height; y >= 0 && y >= minY; y-- {
 		for x := 0; x < width; x++ {
-			if cave[Point{x, y}] {
+			pt := Point{x, y}
+			switch {
+			case cave[pt]:
 				sb.WriteByte('#')
-			} else {
+
+			case piece[pt]:
+				sb.WriteByte('@')
+
+			default:
 				sb.WriteByte('.')
 			}
 		}
 		sb.WriteByte('\n')
 	}
-	fmt.Println(sb.String())
+
+	return sb.String()
 }
 
 func openInput() io.Reader {
@@ -164,7 +232,7 @@ func DoPart1(input string) Part1Result {
 }
 
 func DoPart2(input string) Part2Result {
-	return Part2Fake
+	return Part2Result(play(input, 7, 1_000_000_000_000))
 }
 
 func Part1() Part1Result {
