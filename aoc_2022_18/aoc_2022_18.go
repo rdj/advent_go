@@ -62,14 +62,6 @@ func (a Point) Max(b Point) Point {
 	}
 }
 
-func (p Point) LessThan(max Point) bool {
-	return p.x < max.x && p.y < max.y && p.z < max.z
-}
-
-func (p Point) GreaterThan(min Point) bool {
-	return p.x > min.x && p.y > min.y && p.z > min.z
-}
-
 // -i -j -k, i, j, k
 var unitVectors []Point = []Point{
 	{-1, 0, 0},
@@ -137,54 +129,9 @@ func DoPart1(points map[Point]byte) Part1Result {
 	return Part1Result(faces)
 }
 
-func survey(point Point, points map[Point]byte, minP, maxP Point) byte {
-	if points[point] != Unknown {
-		return points[point]
-	}
-	unknowns := []Point{}
-	v := byte(Unknown)
-Search:
-	for _, u := range unitVectors {
-		for p := point; p.LessThan(maxP) && p.GreaterThan(minP); p = p.Plus(u) {
-			v = points[p]
-			if v != Unknown {
-				break
-			}
-			unknowns = append(unknowns, p)
-		}
-		switch v {
-		case Unknown:
-			v = Outside
-			break Search
-
-		case Inside, Outside:
-			break Search
-
-		case Solid:
-			v = Unknown
-			continue Search
-
-		default:
-			panic("RDJ")
-		}
-	}
-	if v == Unknown {
-		// entirely surrounded
-		v = Inside
-	}
-
-	points[point] = v
-	for _, p := range unknowns {
-		points[p] = v
-	}
-
-	return v
-}
-
 const maxInt = int(^uint(0) >> 1)
 
-func DoPart2(points map[Point]byte) Part2Result {
-	// Find the bounding cube
+func lavalavalava(points map[Point]byte) {
 	minP := Point{maxInt, maxInt, maxInt}
 	maxP := Point{}
 	for p := range points {
@@ -194,32 +141,54 @@ func DoPart2(points map[Point]byte) Part2Result {
 	minP = minP.Plus(Point{-1, -1, -1})
 	maxP = maxP.Plus(Point{1, 1, 1})
 
-	solids := []Point{}
-	for p, v := range points {
-		if v == Solid {
-			solids = append(solids, p)
+	q := []Point{minP}
+	visited := map[Point]bool{}
+
+	for len(q) > 0 {
+		p := q[0]
+		q = q[1:]
+
+		if visited[p] {
+			continue
+		}
+
+		visited[p] = true
+		points[p] = Outside
+
+		for _, n := range p.Neighbors() {
+			if visited[n] {
+				continue
+			}
+			if n.x < minP.x || n.y < minP.y || n.z < minP.z ||
+				n.x > maxP.x || n.y > maxP.y || n.z > maxP.z {
+				continue
+			}
+			if points[n] == Solid {
+				continue
+			}
+
+			q = append(q, n)
 		}
 	}
+}
 
-	faces := 0
-	for _, p := range solids {
-		pf := 0
+func DoPart2(points map[Point]byte) Part2Result {
+	lavalavalava(points)
+
+	exposed := 0
+	for p, v := range points {
+		if v != Solid {
+			continue
+		}
+
 		for _, n := range p.Neighbors() {
-			switch survey(n, points, minP, maxP) {
-			case Solid, Inside:
-				// not exposed
-
-			case Outside:
-				pf++
-
-			default:
-				panic("survey failed")
+			if points[n] == Outside {
+				exposed++
 			}
 		}
-		faces += pf
 	}
 
-	return Part2Result(faces)
+	return Part2Result(exposed)
 }
 
 func Part1() Part1Result {
