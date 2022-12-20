@@ -54,10 +54,6 @@ func dump(r *ring.Ring) {
 	fmt.Println()
 }
 
-func mod_euclid(a, b int) int {
-	return (a%b + b) % b
-}
-
 func run(input []int, multiplier, iterations int) int {
 	var zero *ring.Ring = nil
 
@@ -80,7 +76,7 @@ func run(input []int, multiplier, iterations int) int {
 			after := t.Next()
 			t.Prev().Unlink(1)
 
-			n = mod_euclid(n-1, len(input)-1)
+			n = (n - 1) % (len(input) - 1)
 
 			pos := after.Move(n)
 			//fmt.Println(t.Value, "moves between", pos.Value, "and", pos.Next().Value)
