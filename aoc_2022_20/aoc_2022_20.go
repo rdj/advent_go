@@ -22,7 +22,6 @@ const Part1Want = 3700
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
 const Part2Want = 10_626_948_369_382
 
 func openInput() io.Reader {
@@ -77,9 +76,6 @@ func run(input []int, multiplier, iterations int) int {
 		for _, t := range order {
 			//dump(r)
 			n := t.Value.(int)
-			if n == 0 {
-				continue
-			}
 
 			after := t.Next()
 			t.Prev().Unlink(1)
