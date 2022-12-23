@@ -96,6 +96,15 @@ func wrapY(g Grove, p Point) Point {
 	return Point{p.x, y}
 }
 
+// This is parameterized for my specific input. Kids are home for
+// Christmas and didn't want to spend the time trying to figure out
+// how to generalize it. I made a model on graph paper and folded it
+// into a cube to see how the faces connected.
+//
+// .        _12
+// .        _3_
+// .        45_
+// .        6__
 func init() {
 	edges = map[EdgeKey]EdgeValue{
 		// 1 < to 4 >    4 < to 1 >     -y
