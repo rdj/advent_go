@@ -74,9 +74,9 @@ type Traveler struct {
 
 func ParseInput(input io.Reader) Grove {
 	g := NewGrove()
-	scanner := bufio.NewScanner(input)
 
-	for y := 1; scanner.Scan(); y++ {
+	scanner := bufio.NewScanner(input)
+	for y := 0; scanner.Scan(); y++ {
 		line := scanner.Text()
 		if line == "" {
 			scanner.Scan()
@@ -86,7 +86,7 @@ func ParseInput(input io.Reader) Grove {
 		for x, b := range line {
 			switch b {
 			case Open, Wall:
-				g.points[Point{x + 1, y}] = byte(b)
+				g.points[Point{x, y}] = byte(b)
 			}
 		}
 	}
@@ -158,7 +158,7 @@ func (g Grove) Move(from Point, dir Point, n int) Point {
 }
 
 func DoPart1(g Grove) Part1Result {
-	t := Traveler{pos: Point{1, 1}}
+	t := Traveler{}
 	for g.points[t.pos] != Open {
 		t.pos.x++
 	}
@@ -184,7 +184,7 @@ func DoPart1(g Grove) Part1Result {
 		t.pos = g.Move(t.pos, dir, m.steps)
 	}
 
-	return Part1Result(1000*t.pos.y + 4*t.pos.x + t.facing)
+	return Part1Result(1000*(t.pos.y+1) + 4*(t.pos.x+1) + t.facing)
 }
 
 func DoPart2(grove Grove) Part2Result {
