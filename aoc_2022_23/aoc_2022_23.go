@@ -21,8 +21,7 @@ const Part1Want = 4114
 
 type Part2Result int
 
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
+const Part2Want = 970
 
 type Point struct{ x, y int }
 
@@ -115,7 +114,7 @@ func (e *ElfLand) String() string {
 	return sb.String()
 }
 
-func (e *ElfLand) round() {
+func (e *ElfLand) round() int {
 	plan := map[Point]*Point{}
 
 	for src := range e.pos {
@@ -155,31 +154,18 @@ func (e *ElfLand) round() {
 		}
 	}
 
+	moves := 0
 	for dst, src := range plan {
 		if src != nil {
 			delete(e.pos, *src)
 			e.pos[dst] = true
+			moves++
 		}
 	}
 
 	e.elapsed++
-}
 
-func (e *ElfLand) run() int {
-	// fmt.Println("== Initial State ==")
-	// fmt.Println(e)
-	// fmt.Println()
-
-	for r := 0; r < 10; r++ {
-		e.round()
-
-		// fmt.Println("== End of Round", r+1, " ==")
-		// fmt.Println(e)
-		// fmt.Println()
-	}
-
-	min, max := e.bounds()
-	return (max.x+1-min.x)*(max.y+1-min.y) - len(e.pos)
+	return moves
 }
 
 func ParseInput(input io.Reader) *ElfLand {
@@ -204,12 +190,19 @@ func openInput() io.Reader {
 	return reader
 }
 
-func DoPart1(elves *ElfLand) Part1Result {
-	return Part1Result(elves.run())
+func DoPart1(e *ElfLand) Part1Result {
+	for r := 0; r < 10; r++ {
+		e.round()
+	}
+
+	min, max := e.bounds()
+	return Part1Result((max.x+1-min.x)*(max.y+1-min.y) - len(e.pos))
 }
 
-func DoPart2(elves *ElfLand) Part2Result {
-	return Part2Fake
+func DoPart2(e *ElfLand) Part2Result {
+	for e.round() > 0 {
+	}
+	return Part2Result(e.elapsed)
 }
 
 func Part1() Part1Result {
