@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/samber/lo"
+	"golang.org/x/exp/constraints"
 )
 
 var _ = fmt.Println
@@ -29,14 +30,14 @@ func (a Point) Plus(b Point) Point {
 	return Point{a.x + b.x, a.y + b.y}
 }
 
-func min(a, b int) int {
+func min[T constraints.Ordered](a, b T) T {
 	if a < b {
 		return a
 	}
 	return b
 }
 
-func max(a, b int) int {
+func max[T constraints.Ordered](a, b T) T {
 	if a > b {
 		return a
 	}
