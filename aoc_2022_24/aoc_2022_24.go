@@ -280,7 +280,7 @@ func (b *Blizzards) shortestPathLength(start, goal Point, t0 int) int {
 			c, found := cost[part]
 			if !found || part.time < c {
 				cost[part] = part.time
-				w := WorkItem{part, n.Manhattan(goal)}
+				w := WorkItem{part, 0} // n.Manhattan(goal)}
 				heap.Push(toVisit, &w)
 			}
 		}
