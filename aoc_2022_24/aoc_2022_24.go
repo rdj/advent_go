@@ -2,6 +2,7 @@ package aoc_2022_24
 
 import (
 	"bufio"
+	"container/heap"
 	"fmt"
 	"io"
 	"math/big"
@@ -15,14 +16,21 @@ import (
 var _ = fmt.Println
 var _ = lo.Max[int]
 
-// mod_euclid(a, b) returns the remainder of the "euclidian division"
-// a / b. This result always has the same sign as b. This is how the %
-// operator works in perl, ruby, and python. (In go, as in C, a % b
-// matches the sign of a.)
-//
-// See also: https://torstencurdt.com/tech/posts/modulo-of-negative-numbers/
-func mod_euclid(a, b int) int {
-	return (a%b + b) % b
+const inputFile = "input.txt"
+
+type Part1Result int
+
+const Part1Want = 242
+
+type Part2Result int
+
+const Part2Want = 720
+
+func absdiff(n, m int) int {
+	if n > m {
+		return n - m
+	}
+	return m - n
 }
 
 func lcm(a, b int) int {
@@ -32,6 +40,16 @@ func lcm(a, b int) int {
 	gcd_.GCD(nil, nil, a_, b_)
 	gcd := int(gcd_.Uint64())
 	return (a * b) / gcd
+}
+
+// mod_euclid(a, b) returns the remainder of the "euclidian division"
+// a / b. This result always has the same sign as b. This is how the %
+// operator works in perl, ruby, and python. (In go, as in C, a % b
+// matches the sign of a.)
+//
+// See also: https://torstencurdt.com/tech/posts/modulo-of-negative-numbers/
+func mod_euclid(a, b int) int {
+	return (a%b + b) % b
 }
 
 type Point struct{ x, y int }
@@ -58,6 +76,20 @@ func (p Point) South() Point {
 
 func (p Point) West() Point {
 	return p.Plus(Point{-1, 0})
+}
+
+func (a Point) Manhattan(b Point) int {
+	return absdiff(a.x, b.x) + absdiff(a.y, b.y)
+}
+
+func (p Point) Neighbors() []Point {
+	return []Point{
+		p.North(),
+		p.East(),
+		p.South(),
+		p.West(),
+		p, // in this problem, we can stay in place
+	}
 }
 
 func (p Point) OffsetByFlag(d byte) Point {
@@ -88,6 +120,7 @@ type Blizzards struct {
 	rows, cols              int
 	state                   [][]byte
 	timeExplored, timeCycle int
+	start, goal             Point
 }
 
 func NewBlizzard(initial []byte, rows, cols int) *Blizzards {
@@ -102,6 +135,18 @@ func NewBlizzard(initial []byte, rows, cols int) *Blizzards {
 	b.state = make([][]byte, b.timeCycle)
 	b.state[0] = make([]byte, b.rows*b.cols)
 	copy(b.state[0], initial)
+
+	for c := 0; c < b.cols; c++ {
+		start := Point{c, 0}
+		goal := Point{c, b.rows - 1}
+		if b.get(0, start) != WallTile {
+			b.start = start
+		}
+		if b.get(0, goal) != WallTile {
+			b.goal = goal
+		}
+	}
+
 	return b
 }
 
@@ -159,6 +204,91 @@ func (b *Blizzards) index(p Point) int {
 	return p.y*b.cols + p.x
 }
 
+type Partial struct {
+	time int
+	pos  Point
+}
+
+type WorkItem struct {
+	p    Partial
+	heur int
+}
+
+func (a *WorkItem) Less(b *WorkItem) bool {
+	ha := a.p.time + a.heur
+	hb := b.p.time + b.heur
+
+	if ha == hb {
+		return a.heur < b.heur
+	}
+	return ha < hb
+}
+
+type Work []*WorkItem
+
+func (a Work) Len() int           { return len(a) }
+func (a Work) Less(i, j int) bool { return a[i].Less(a[j]) }
+func (a Work) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a *Work) Push(x any)        { *a = append(*a, x.(*WorkItem)) }
+
+func (a *Work) Pop() any {
+	old := *a
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	*a = old[0 : n-1]
+	return item
+}
+
+func (b *Blizzards) shortestPathLength(start, goal Point, t0 int) int {
+	cost := map[Partial]int{}
+	visited := map[Partial]bool{}
+	toVisit := new(Work)
+	heap.Init(toVisit)
+
+	{
+		w := WorkItem{}
+		w.p.pos = start
+		w.p.time = t0
+		heap.Push(toVisit, &w)
+	}
+
+	for toVisit.Len() > 0 {
+		entry := heap.Pop(toVisit).(*WorkItem)
+		p := entry.p
+		if visited[p] {
+			continue
+		}
+		visited[p] = true
+
+		if p.pos == goal {
+			return p.time
+		}
+
+		t := p.time + 1
+		for _, n := range p.pos.Neighbors() {
+			if n.x < 0 || n.y < 0 || n.x >= b.cols || n.y >= b.rows {
+				continue
+			}
+			if b.get(t, n) != EmptyTile {
+				continue
+			}
+			part := Partial{t, n}
+			if visited[part] {
+				continue
+			}
+			c, found := cost[part]
+			if !found || part.time < c {
+				cost[part] = part.time
+				w := WorkItem{part, n.Manhattan(goal)}
+				heap.Push(toVisit, &w)
+			}
+		}
+	}
+
+	panic("no path found")
+}
+
 func (b *Blizzards) stateAt(t int) []byte {
 	t = t % b.timeCycle
 	b.advance(t)
@@ -193,18 +323,6 @@ func (b *Blizzards) String(t int) string {
 
 	return sb.String()
 }
-
-const inputFile = "input.txt"
-
-type Part1Result int
-
-const Part1Fake = 0xDEAD_BEEF
-const Part1Want = 0xBAAD_F00D
-
-type Part2Result int
-
-const Part2Fake = 0xDEAD_BEEF
-const Part2Want = 0xBAAD_F00D
 
 func openInput() io.Reader {
 	reader, err := os.Open(inputFile)
@@ -249,11 +367,14 @@ func ParseInput(input io.Reader) *Blizzards {
 }
 
 func DoPart1(b *Blizzards) Part1Result {
-	return Part1Fake
+	return Part1Result(b.shortestPathLength(b.start, b.goal, 0))
 }
 
 func DoPart2(b *Blizzards) Part2Result {
-	return Part2Fake
+	there := int(DoPart1(b))
+	back := b.shortestPathLength(b.goal, b.start, there)
+	again := b.shortestPathLength(b.start, b.goal, back)
+	return Part2Result(again)
 }
 
 func Part1() Part1Result {
